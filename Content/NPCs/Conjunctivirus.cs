@@ -1,3 +1,5 @@
+using CalamityMod;
+using CalamityMod.NPCs.Perforator;
 using Microsoft.Xna.Framework;
 using Polyphemalus.Content.Items;
 using Polyphemalus.Content.Items.Magic;
@@ -57,6 +59,14 @@ namespace Polyphemalus.Content.NPCs
             NPC.aiStyle = -1;
 
         }
+
+        public Dictionary<string, int> AIShare = new Dictionary<string, int>()
+        {
+            { "soloTimer", 0 },
+            { "beenSolo", 1 },
+            { "shotTimer", 0 },
+            { "index", 2 },
+        };
         public ref float timer => ref NPC.localAI[0];
         public ref float phase => ref NPC.localAI[1];
 
@@ -75,7 +85,39 @@ namespace Polyphemalus.Content.NPCs
             {
                 NPC.TargetClosest();
             }
+            var eyesLeft = 0;
+            AIShare["index"] = 0;
+            NPC astigmadeddon = null;
+            NPC exotrexia = null;
+            NPC cataractacomb = null;
+            Astigmageddon astigmageddonModNpc = null;
+            Exotrexia exotrexiaModNpc = null;
+            Cataractacomb cataractacombModNpc = null;
+            for (int k = 0; k < Main.maxNPCs; k++)
+            {
+                NPC target = Main.npc[k];
+                if (target.type == ModContent.NPCType<Astigmageddon>() && target.active == true)
+                {
+                    astigmadeddon = target;
+                    astigmageddonModNpc = astigmadeddon.ModNPC<Astigmageddon>();
+                    AIShare["index"]++;
+                    eyesLeft++;
+                }
+                if (target.type == ModContent.NPCType<Exotrexia>() && target.active == true)
+                {
+                    exotrexia = target;
+                    exotrexiaModNpc = exotrexia.ModNPC<Exotrexia>();
+                    AIShare["index"]++;
+                    eyesLeft++;
+                }
+                if (target.type == ModContent.NPCType<Cataractacomb>() && target.active == true)
+                {
 
+                    cataractacomb = target;
+                    cataractacombModNpc = cataractacomb.ModNPC<Cataractacomb>();
+                    eyesLeft++;
+                }
+            }
             Player player = Main.player[NPC.target];
 
             if (player.dead)
@@ -93,7 +135,7 @@ namespace Polyphemalus.Content.NPCs
                 TurnTowards(player.Center);
                 timer++;
 
-                var circlePos = CirclePos(player, (float)(((timer % 180) * 2 + 90) * Math.PI / 180), 500f);
+                var circlePos = CirclePos(player.Center, (float)(((timer % 180) * 2 + 90) * Math.PI / 180), 500f);
                 if (Vector2.Distance(NPC.Center, circlePos) <= 48 * 4)
                 {
                     NPC.Center = circlePos;
@@ -101,7 +143,7 @@ namespace Polyphemalus.Content.NPCs
                 }
                 else
                 {
-                    MoveTowards(circlePos, 80, 1);
+                    MoveTowards(circlePos, 80, 5);
                 }
 
                 if (timer >= 60)
@@ -121,22 +163,115 @@ namespace Polyphemalus.Content.NPCs
             }
             if (phase == 1)
             {
-                ;
+
+                TurnTowards(PredictiveMotion(player, 30));
                 timer++;
-                MoveTowards(player.Center, 8, 15);
-                NPC.rotation = NPC.velocity.ToRotation();
-                if (timer % 3 == 0 && timer < 30*9)
+                var circleSpot = eyesLeft;
+                if (cataractacombModNpc != null)
                 {
-                    ShootCenter(ProjectileID.EyeFire, 5f, 2);
-                    SoundEngine.PlaySound(SoundID.Item34);
+                    if (cataractacombModNpc.AIShare["soloTimer"] > 0) {
+                        circleSpot--;
+                        
+                    }
                 }
-                if (timer > 300)
+                if (exotrexiaModNpc != null)
                 {
-                    timer = 0;
+                    if (exotrexiaModNpc.AIShare["soloTimer"] > 0) {
+                        circleSpot--;
+                        AIShare["index"]--;
+                     }
+                }
+                if (astigmageddonModNpc != null)
+                {
+                    if (astigmageddonModNpc.AIShare["soloTimer"] > 0)
+                    {
+                        circleSpot--;
+                        AIShare["index"]--;
+                    }
+                }
+                    var circlePos = CirclePos(player.Center, (float)(((timer % 360) * 2 + (360 / (circleSpot + 1)) * AIShare["index"]) * Math.PI / 180), 650);
+
+                if (Vector2.Distance(NPC.Center, circlePos) <= 48 * 4)
+                {
+                    NPC.Center = circlePos;
+                    NPC.velocity = Vector2.Zero;
+                }
+                else
+                {
+                    MoveTowards(circlePos, 60, 10);
+                }
+
+                if (timer % 180 == 15)
+                {
+                    ShootCenter(ProjectileID.CursedFlameHostile, 10, 45);
+                    ShootCenter(ProjectileID.CursedFlameHostile, 10, 45, -15);
+                    ShootCenter(ProjectileID.CursedFlameHostile, 10, 45, 15);
+                }
+                if (timer % 60 == 45 && AIShare["beenSolo"] == 0)
+                {
                     phase = 2;
-                }   
+                    timer = 0;
+                    AIShare["soloTimer"] = 1;
+                }
+
             }
             if (phase == 2)
+            {
+                timer++;
+                var circle = CirclePos(CirclePos(player.Center, (float)(Math.PI / 180 * timer), 175), (float)(Math.PI / 180 * timer * 4), 300);
+                var circlePredictive = CirclePos(CirclePos(player.Center, (float)(Math.PI / 180 * (timer + 1)), 175), (float)(Math.PI / 180 * (timer + 1) * 4), 300);
+                if (Vector2.Distance(NPC.Center, circle) <= 48 * 4)
+                {
+                    NPC.Center = circle;
+                    NPC.velocity = Vector2.Zero;
+                    NPC.rotation = (circlePredictive - NPC.Center).ToRotation();
+                    phase = 3;
+                }
+                else
+                {
+                    MoveTowards(circle, 40, 5);
+                    NPC.rotation = NPC.velocity.ToRotation();
+                }
+
+                if (timer >= 360)
+                {
+                    timer = 0;
+                    phase = 1;
+                    ShootCenter(ProjectileID.CultistBossLightningOrb, 5, 50);
+                    NPC.velocity *= -0.25f;
+                }
+            }
+            if (phase == 3)
+            {
+                timer++;
+                var circle = CirclePos(CirclePos(player.Center, (float)(Math.PI / 180 * timer), 175), (float)(Math.PI / 180 * timer * 4), 300);
+                var circlePredictive = CirclePos(CirclePos(player.Center, (float)(Math.PI / 180 * (timer + 1)), 175), (float)(Math.PI / 180 * (timer + 1) * 4), 300);
+                NPC.Center = circle;
+                NPC.velocity = Vector2.Zero;
+                NPC.rotation = (circlePredictive - NPC.Center).ToRotation();
+                if (timer % 20 == 0)
+                {
+                    ShootCenter(ProjectileID.CursedFlameHostile, 1, 20);
+                }
+
+
+                if (timer >= 360)
+                {
+                    timer = 0;
+                    NPC.velocity = new Vector2(0, 10);
+                    phase = 4;
+                }
+            }
+            if (phase == 4)
+            {
+                timer++;
+                if (timer >= 30)
+                {
+                    phase = 5;
+                    timer = 0;
+                }
+            }
+            if (phase == 5)
             {
                 int dashcount = 5;
                 timer++;
@@ -158,15 +293,75 @@ namespace Polyphemalus.Content.NPCs
                     subphase++;
                     if (subphase > dashcount)
                     {
+                        phase = -1;
                         subphase = 0;
-                        NPC.damage = 0;
-                        phase++;
+                        timer = 0;
                     }
                 }
             }
-            if (phase > 2)
+            if (phase == -1)
             {
-                phase = 1;
+                timer++;
+                NPC.velocity *= 0.95f;
+                if (timer > 180)
+                {
+                    phase = 1;
+                    timer = 0;
+                    AIShare["beenSolo"] = 1;
+                    AIShare["soloTimer"] = 0;
+                    if (cataractacomb != null)
+                    {
+                        timer = cataractacombModNpc.timer;
+                        cataractacombModNpc.AIShare["beenSolo"] = 0;
+                    }
+                    else if (astigmadeddon != null)
+                    {
+                        timer = astigmageddonModNpc.timer;
+                        astigmageddonModNpc.AIShare["beenSolo"] = 0;
+                    } else if (exotrexia!= null) {
+                        timer = exotrexiaModNpc.timer;
+                        exotrexiaModNpc.AIShare["beenSolo"] = 0;
+                    }
+                }
+            }
+        }
+
+        public override void OnKill()
+        {
+            Astigmageddon astigmadeddon = null;
+            Exotrexia exotrexia = null;
+            Cataractacomb cataractacomb = null;
+            for (int k = 0; k < Main.maxNPCs; k++)
+            {
+                NPC target = Main.npc[k];
+                if (target.type == ModContent.NPCType<Astigmageddon>() && target.active == true)
+                {
+                    astigmadeddon = target.ModNPC<Astigmageddon>();
+                }
+                if (target.type == ModContent.NPCType<Exotrexia>() && target.active == true)
+                {
+                    exotrexia = target.ModNPC<Exotrexia>();
+                }
+                if (target.type == ModContent.NPCType<Cataractacomb>() && target.active == true)
+                {
+
+                    cataractacomb = target.ModNPC<Cataractacomb>();
+                }
+            }
+            if (AIShare["beenSolo"] == 0)
+            {
+                if (cataractacomb != null)
+                {
+                    cataractacomb.AIShare["beenSolo"] = 0;
+                }
+                else if (astigmadeddon != null)
+                {
+                    astigmadeddon.AIShare["beenSolo"] = 0;
+                }
+                else if (exotrexia != null)
+                {
+                    exotrexia.AIShare["beenSolo"] = 0;
+                }
             }
         }
 
@@ -188,9 +383,9 @@ namespace Polyphemalus.Content.NPCs
             lastLivingPoly.OnSuccess(dropItem);
 
         }
-        private Vector2 CirclePos(Player player, float rotation, float distance)
+        private Vector2 CirclePos(Vector2 pos, float rotation, float distance)
         {
-            return player.Center + (rotation).ToRotationVector2() * distance;
+            return pos + (rotation).ToRotationVector2() * distance;
         }
 
         private void MoveTowards(Vector2 goal, float speed, float inertia)
@@ -212,6 +407,12 @@ namespace Polyphemalus.Content.NPCs
             {
                 NPC.rotation += Math.Min((goal2 % rad360 + rad360) - NPC.rotation, maxSpeed + rad360);
             }
+        }
+
+        private Vector2 PredictiveMotion(Player player, float strength)
+        {
+
+            return (player.Center + player.velocity * strength);
         }
 
     }

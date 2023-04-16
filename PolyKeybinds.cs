@@ -1,4 +1,6 @@
 using Terraria.ModLoader;
+using Terraria;
+using Polyphemalus.Content.NPCs;
 
 namespace Polyphemalus;
 public class PolyKeybinds : ModSystem
@@ -12,6 +14,16 @@ public class PolyKeybinds : ModSystem
     public override void Unload()
     {
         PolyKeybinds.PolyDashKeybind = null;
+    }
+
+    
+}
+
+public static class npcFinder
+{
+    public static T ModNPC<T>(this NPC npc) where T : ModNPC
+    {
+        return npc.ModNPC as T;
     }
 }
 

@@ -9,50 +9,52 @@ using System.Collections.Generic;
 
 namespace Polyphemalus.Content.Items
 {
-public class Homochromia : ModItem
-{
-    public override void SetStaticDefaults()
+    public class Homochromia : ModItem
     {
-        DisplayName.SetDefault("Homochromia");
-        Tooltip.SetDefault("No homo.\n90% chance to not consume ammo");
+        public override void SetStaticDefaults()
+        {
+            DisplayName.SetDefault("Homochromia");
+            Tooltip.SetDefault("No homo.\n90% chance to not consume ammo");
 
-        CreativeItemSacrificesCatalog.Instance.SacrificeCountNeededByItemId[Type] = 1;
+            CreativeItemSacrificesCatalog.Instance.SacrificeCountNeededByItemId[Type] = 1;
 
-    }
+        }
 
-    public override void SetDefaults()
-    {
-        Item.width = 28;
-        Item.height = 56;
-        Item.value = 100000;
-        Item.rare = 8;
-        Item.damage = 50;
-        Item.useAnimation = 84;
-        Item.useTime = 2;
-        Item.useLimitPerAnimation = 7 * 4;
-        Item.useStyle = ItemUseStyleID.Shoot;
-        Item.consumable = false;
-        Item.autoReuse = true;
-        Item.DamageType = DamageClass.Ranged;
-        Item.noMelee = true;
-        Item.knockBack = 6.5f;
-        Item.shoot = ProjectileID.WoodenArrowFriendly;
-        Item.shootSpeed = 30f;
-        Item.UseSound = SoundID.Item102;
-        Item.useAmmo = AmmoID.Arrow;
-    }
+        public override void SetDefaults()
+        {
+            Item.width = 28;
+            Item.height = 56;
+            Item.value = 100000;
+            Item.rare = 8;
+            Item.damage = 50;
+            Item.useAnimation = 84;
+            Item.useTime = 2;
+            Item.useLimitPerAnimation = 7 * 4;
+            Item.useStyle = ItemUseStyleID.Shoot;
+            Item.consumable = false;
+            Item.autoReuse = true;
+            Item.DamageType = DamageClass.Ranged;
+            Item.noMelee = true;
+            Item.knockBack = 6.5f;
+            Item.shoot = ProjectileID.WoodenArrowFriendly;
+            Item.shootSpeed = 30f;
+            Item.UseSound = SoundID.Item102;
+            Item.useAmmo = AmmoID.Arrow;
+        }
 
-    private int shotCount = 0;
-    public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
-    {
-        List<float> spread = new List<float> { -45 / 3, 45 / 3, -45 / 6, 45 / 6, -45 / 12, 45 / 12, 0 };
-        velocity *= (Main.rand.Next(100, 151) / 100f);
-        Projectile.NewProjectile(source, position, velocity.RotatedBy((spread[shotCount % 7] * (Math.PI / 180))), ProjectileID.MoonlordArrow, damage, knockback, player.whoAmI);
-        shotCount++;
-        return false;
-    }
+        private int shotCount = 0;
+        public override bool Shoot(Player player, EntitySource_ItemUse_WithAmmo source, Vector2 position, Vector2 velocity, int type, int damage, float knockback)
+        {
+            List<float> spread = new List<float> { -45 / 3, 45 / 3, -45 / 6, 45 / 6, -45 / 12, 45 / 12, 0 };
+            velocity *= (Main.rand.Next(100, 151) / 100f);
+            Projectile.NewProjectile(source, position, velocity.RotatedBy((spread[shotCount % 7] * (Math.PI / 180))), ProjectileID.MoonlordArrow, damage, knockback, player.whoAmI);
+            shotCount++;
+            return false;
+        }
 
-    public override bool CanConsumeAmmo(Item ammo, Player player)
+
+
+        public override bool CanConsumeAmmo(Item ammo, Player player)
     {
         return Main.rand.NextFloat() >= 0.90f;
     }

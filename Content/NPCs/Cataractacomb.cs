@@ -1,3 +1,4 @@
+using CalamityMod.Projectiles.Magic;
 using Microsoft.Xna.Framework;
 using Polyphemalus.Content.Items;
 using Polyphemalus.Content.Items.Magic;
@@ -38,6 +39,13 @@ namespace Polyphemalus.Content.NPCs
             NPCID.Sets.DebuffImmunitySets.Add(Type, debuffData);
         }
 
+        public Dictionary<string,int> AIShare = new Dictionary<string, int>()
+        {
+            { "soloTimer", 0 },
+            { "beenSolo", 1 },
+            { "shotTimer", 0 },
+            { "index", 3 },
+        };
         public override void SetDefaults()
         {
             NPC.width = 110;
@@ -73,6 +81,40 @@ namespace Polyphemalus.Content.NPCs
             {
                 NPC.TargetClosest();
             }
+            var eyesLeft = 0;
+            AIShare["index"] = 0;
+            NPC astigmadeddon = null;
+            NPC exotrexia = null;
+            NPC conjunctivirus = null;
+            Astigmageddon astigmageddonModNpc = null;
+            Exotrexia exotrexiaModNpc = null;
+            Conjunctivirus conjunctivirusModNpc = null;
+            for (int k = 0; k < Main.maxNPCs; k++)
+            {
+                NPC target = Main.npc[k];
+                if (target.type == ModContent.NPCType<Astigmageddon>() && target.active == true)
+                {
+                    astigmadeddon = target;
+                    astigmageddonModNpc = astigmadeddon.ModNPC<Astigmageddon>();
+                    AIShare["index"]++;
+                    eyesLeft++;
+                }
+                if (target.type == ModContent.NPCType<Exotrexia>() && target.active == true)
+                {
+                    exotrexia = target;
+                    exotrexiaModNpc = exotrexia.ModNPC<Exotrexia>();
+                    AIShare["index"]++;
+                    eyesLeft++;
+                }
+                if (target.type == ModContent.NPCType<Conjunctivirus>() && target.active == true)
+                {
+
+                    conjunctivirus = target;
+                    conjunctivirusModNpc = conjunctivirus.ModNPC<Conjunctivirus>();
+                    AIShare["index"]++;
+                    eyesLeft++;
+                }
+            }
 
             Player player = Main.player[NPC.target];
 
@@ -85,7 +127,6 @@ namespace Polyphemalus.Content.NPCs
                 return;
             }
             TurnTowards(player.Center);
-
             Vector2 abovePlayer = (player.Center + new Vector2(0, -500));
             if (phase == 0)
             {
@@ -117,16 +158,49 @@ namespace Polyphemalus.Content.NPCs
             }
             if (phase == 1)
             {
+
+                TurnTowards(player.Center);
                 timer++;
-                MoveTowards(abovePlayer, 30, 30);
-                if (timer % 45 == 15)
+                var circleSpot = eyesLeft;
+                if (conjunctivirusModNpc != null)
                 {
-                    ShootCenter(ProjectileID.CultistBossFireBallClone, 4, 50);
+                    if (conjunctivirusModNpc.AIShare["soloTimer"] > 0)
+                    {
+                        circleSpot--;
+                        AIShare["index"]--;
+                    }
                 }
-                if (timer > 600)
+                if (exotrexiaModNpc != null)
                 {
-                    phase = 2;
-                    timer = 0;
+                    if (exotrexiaModNpc.AIShare["soloTimer"] > 0)
+                    {
+                        circleSpot--;
+                        AIShare["index"]--;
+                    }
+                }
+                if (astigmageddonModNpc != null)
+                {
+                    if (astigmageddonModNpc.AIShare["soloTimer"] > 0)
+                    {
+                        circleSpot--;
+                        AIShare["index"]--;
+                    }
+                }
+                var circlePos = CirclePos(player, (float)(((timer % 360) * 2 + (360 / (circleSpot + 1)) * AIShare["index"]) * Math.PI / 180), 650);
+
+                if (Vector2.Distance(NPC.Center, circlePos) <= 48 * 4)
+                {
+                    NPC.Center = circlePos;
+                    NPC.velocity = Vector2.Zero;
+                }
+                else
+                {
+                    MoveTowards(circlePos, 60, 10);
+                }
+                if (timer % 120 == 75)
+                {
+                    ShootCenter(ProjectileID.CultistBossFireBallClone, 6, 45, -30);
+                    ShootCenter(ProjectileID.CultistBossFireBallClone, 6, 45, 30);
                 }
             }
             if (phase == 2) {
@@ -154,6 +228,44 @@ namespace Polyphemalus.Content.NPCs
             }
         }
 
+        public override void OnKill()
+        {
+            Astigmageddon astigmadeddon = null;
+            Exotrexia exotrexia = null;
+            Conjunctivirus conjunctivirus = null;
+            for (int k = 0; k < Main.maxNPCs; k++)
+            {
+                NPC target = Main.npc[k];
+                if (target.type == ModContent.NPCType<Astigmageddon>() && target.active == true)
+                {
+                    astigmadeddon = target.ModNPC<Astigmageddon>();
+                }
+                if (target.type == ModContent.NPCType<Exotrexia>() && target.active == true)
+                {
+                    exotrexia = target.ModNPC<Exotrexia>();
+                }
+                if (target.type == ModContent.NPCType<Conjunctivirus>() && target.active == true)
+                {
+
+                    conjunctivirus = target.ModNPC<Conjunctivirus>();
+                }
+            }
+            if (AIShare["beenSolo"] == 0)
+            {
+                if (conjunctivirus != null)
+                {
+                    conjunctivirus.AIShare["beenSolo"] = 0;
+                }
+                else if (astigmadeddon != null)
+                {
+                    astigmadeddon.AIShare["beenSolo"] = 0;
+                }
+                else if (exotrexia != null)
+                {
+                    exotrexia.AIShare["beenSolo"] = 0;
+                }
+            }
+        }
         private void ShootCenter(int type, float velocityMod, int damage, float spread = 0)
         {
             if (Main.masterMode) damage /= 4;
