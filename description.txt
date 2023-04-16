@@ -1,0 +1,3 @@
+Polyphemalus adds Polyphemalus from the Fandom wiki. Doesn't require Calamity but is reccomended
+
+version 0.2 - added daytime enrage, buffed some attacks and nerfed BH lasers damage slightly.
